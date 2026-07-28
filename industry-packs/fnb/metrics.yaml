@@ -1,0 +1,93 @@
+# 餐饮核心指标。benchmark 为马来西亚 SME 参考区间，接入真实商家后需校准。
+metrics:
+  - key: revenue
+    label: { zh: 营业额, en: Revenue }
+    sql: "SUM(total) FILTER (WHERE status='paid')"
+    entity: order
+    dimensions: [date, hour, channel, store, staff, menu_item]
+    format: money
+  - key: net_receivable
+    label: { zh: 实收（扣平台抽佣）, en: Net Receivable }
+    sql: "SUM(total - platform_commission) FILTER (WHERE status='paid')"
+    entity: order
+    note: "外卖占比高的商家，必须看这个而不是营业额"
+  - key: order_count
+    label: { zh: 单量 }
+    sql: "COUNT(*) FILTER (WHERE status='paid')"
+  - key: guest_count
+    label: { zh: 客数(pax) }
+    sql: "SUM(pax) FILTER (WHERE status='paid' AND channel='dine_in')"
+  - key: aov
+    label: { zh: 客单价 }
+    sql: "revenue / NULLIF(guest_count,0)"
+    benchmark: { kopitiam: [8,15], cafe: [18,35], restaurant: [30,60], mamak: [8,14], bubble_tea: [10,18] }
+  - key: ticket_avg
+    label: { zh: 单均 }
+    sql: "revenue / NULLIF(order_count,0)"
+  - key: table_turnover
+    label: { zh: 翻台率 }
+    sql: "COUNT(DISTINCT order.id) / NULLIF(COUNT(DISTINCT dining_table.id),0)"
+    benchmark: { lunch: [2.0,3.5], dinner: [1.5,2.5], mamak: [4,8] }
+  - key: food_cost
+    label: { zh: 食材成本 }
+    sql: "SUM(order_line.line_cost)"
+  - key: food_cost_pct
+    label: { zh: 食材成本率 }
+    sql: "food_cost / NULLIF(revenue,0)"
+    format: percent
+    benchmark: { healthy: [0.28,0.35], warning: 0.38, critical: 0.42 }
+    note: "饮品店应 <0.30，中餐 0.32-0.38，火锅可到 0.40"
+  - key: labour_cost_pct
+    label: { zh: 人力成本率 }
+    sql: "SUM(shift.hours * staff.hourly_rate) / NULLIF(revenue,0)"
+    benchmark: { healthy: [0.18,0.25], warning: 0.28, critical: 0.33 }
+  - key: prime_cost_pct
+    label: { zh: 主要成本率（食材+人力）}
+    sql: "food_cost_pct + labour_cost_pct"
+    benchmark: { healthy: [0.50,0.60], warning: 0.63, critical: 0.68 }
+    note: "餐饮最重要的单一指标。超过 0.65 基本不赚钱。"
+  - key: gross_margin
+    label: { zh: 毛利率 }
+    sql: "1 - food_cost_pct"
+  - key: waste_pct
+    label: { zh: 报废率 }
+    sql: "SUM(waste_log.cost) / NULLIF(food_cost,0)"
+    benchmark: { healthy: [0,0.02], warning: 0.04, critical: 0.06 }
+  - key: delivery_share
+    label: { zh: 外卖占比 }
+    sql: "SUM(total) FILTER (WHERE channel IN ('grabfood','foodpanda','shopeefood')) / NULLIF(revenue,0)"
+  - key: commission_pct
+    label: { zh: 平台抽佣率 }
+    sql: "SUM(platform_commission) / NULLIF(SUM(total) FILTER (WHERE channel IN ('grabfood','foodpanda','shopeefood')),0)"
+    benchmark: { typical: [0.25,0.35] }
+  - key: void_rate
+    label: { zh: 作废率 }
+    sql: "COUNT(*) FILTER (WHERE status='void') / NULLIF(COUNT(*),0)"
+    benchmark: { healthy: [0,0.01], warning: 0.03 }
+    note: "异常升高是内部舞弊的首要信号，必须按收银员维度看"
+  - key: discount_rate
+    label: { zh: 折扣率 }
+    sql: "SUM(discount) / NULLIF(SUM(subtotal),0)"
+  - key: repeat_rate
+    label: { zh: 复购率(90天) }
+    sql: "COUNT(DISTINCT customer_id) FILTER (WHERE visit_count>1) / NULLIF(COUNT(DISTINCT customer_id),0)"
+    benchmark: { healthy: [0.30,0.50] }
+  - key: member_share
+    label: { zh: 会员消费占比 }
+    sql: "SUM(total) FILTER (WHERE customer_id IS NOT NULL) / NULLIF(revenue,0)"
+  - key: avg_prep_time
+    label: { zh: 平均出餐时长(分钟) }
+    sql: "AVG(EXTRACT(EPOCH FROM (order_line.ready_at - order.opened_at))/60)"
+    benchmark: { healthy: [8,15], warning: 20 }
+  - key: labour_efficiency
+    label: { zh: 人效(每工时营业额) }
+    sql: "revenue / NULLIF(SUM(shift.hours),0)"
+    benchmark: { healthy: [40,80] }
+  - key: stock_days
+    label: { zh: 库存周转天数 }
+    sql: "SUM(ingredient.stock_qty * cost_per_unit) / NULLIF(food_cost/period_days,0)"
+    benchmark: { healthy: [3,7], warning: 12 }
+  - key: stored_value_liability
+    label: { zh: 储值负债 }
+    sql: "SUM(customer.balance)"
+    note: "这是负债不是收入。老板常误以为储值收的钱可以花。"

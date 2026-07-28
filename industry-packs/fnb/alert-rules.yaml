@@ -1,0 +1,63 @@
+rules:
+  - key: prime_cost_high
+    severity: critical
+    label: { zh: 主要成本率超标 }
+    condition: "prime_cost_pct > 0.65"
+    window: last_7d
+    message: { zh: "近7天主要成本率 {{value|pct}}，超过 65% 警戒线。目前基本不赚钱。" }
+    next_action: skill:cost_diagnosis
+  - key: food_cost_spike
+    severity: warning
+    condition: "food_cost_pct > 0.38 OR food_cost_pct > last_30d_avg * 1.15"
+    window: last_7d
+    message: { zh: "食材成本率 {{value|pct}}，比上月高 {{delta|pct}}。可能原因：进价上涨/浪费/配方超量/偷窃。" }
+    next_action: skill:food_cost_analysis
+  - key: void_anomaly
+    severity: critical
+    condition: "daily void_rate > 0.03 OR daily void_amount > 300"
+    group_by: staff_id
+    message: { zh: "{{staff.name}} 今天作废 {{count}} 单共 RM{{amount}}，明显高于平均。建议调取监控核对。" }
+    privacy_note: "仅推送给 owner，不进任何群组"
+  - key: cash_shortfall
+    severity: critical
+    condition: "mtd_expense > mtd_net_receivable"
+    message: { zh: "本月支出 RM{{expense}} 已超过实收 RM{{revenue}}。现金流告急。" }
+  - key: low_stock
+    severity: warning
+    condition: "ingredient.stock_qty <= ingredient.safety_stock"
+    message: { zh: "{{ingredient.name}} 剩 {{qty}}{{unit}}，低于安全库存。按近7天用量约还能撑 {{days}} 天。" }
+    next_action: skill:purchase_suggest
+  - key: expiring_soon
+    severity: warning
+    condition: "ingredient.is_perishable AND days_to_expiry <= 2"
+    message: { zh: "{{ingredient.name}} 还有 {{days}} 天过期，库存价值 RM{{value}}。建议做特价推。" }
+  - key: waste_high
+    severity: warning
+    condition: "waste_pct > 0.04"
+    window: last_7d
+  - key: revenue_drop
+    severity: warning
+    condition: "revenue < last_4w_same_weekday_avg * 0.75"
+    message: { zh: "今天营业额 RM{{value}}，比过去4周同一星期几平均低 {{delta|pct}}。" }
+    next_action: skill:anomaly_attribution
+  - key: bad_review_streak
+    severity: warning
+    condition: "count(review WHERE rating<=2) >= 3"
+    window: last_7d
+    message: { zh: "近7天收到 {{count}} 条差评，集中在：{{top_topics}}。" }
+  - key: delivery_unprofitable
+    severity: warning
+    condition: "commission_pct > 0.30 AND delivery_gross_margin < 0.15"
+    message: { zh: "外卖扣佣后毛利仅 {{margin|pct}}，卖越多亏越多。建议调整外卖定价或菜品结构。" }
+  - key: prep_time_slow
+    severity: info
+    condition: "avg_prep_time > 20"
+    window: last_1d_peak_hours
+  - key: stored_value_risk
+    severity: info
+    condition: "stored_value_liability > mtd_revenue * 1.5"
+    message: { zh: "储值负债 RM{{value}}，是本月营业额的 {{ratio}} 倍。注意这是要还的钱。" }
+  - key: labour_overtime
+    severity: info
+    condition: "staff weekly_hours > 48"
+    note: "马来西亚雇佣法 1955 每周工时上限"

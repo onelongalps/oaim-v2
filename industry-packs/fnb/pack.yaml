@@ -1,0 +1,32 @@
+id: fnb
+version: 1.0.0
+name: { zh: 餐饮业, en: Food & Beverage }
+market: MY
+subtypes:
+  - { key: kopitiam,     zh: 茶餐室,     traits: [多档口, 现金为主, 早市高峰] }
+  - { key: cafe,         zh: 咖啡馆,     traits: [单店, 会员储值, 下午茶高峰] }
+  - { key: restaurant,   zh: 中餐馆,     traits: [桌台, 预订, 宴席] }
+  - { key: mamak,        zh: 嘛嘛档,     traits: [24小时, 高翻台, 低客单] }
+  - { key: bubble_tea,   zh: 饮品店,     traits: [外带为主, 加料SKU多, 连锁] }
+  - { key: cloud_kitchen,zh: 云厨房,     traits: [纯外卖, 平台抽佣重] }
+includes:
+  baseline_schema: baseline-schema.json
+  metrics: metrics.yaml
+  alert_rules: alert-rules.yaml
+  glossary: glossary.yaml
+  advice_kb: advice-kb.yaml
+  skills: skills/*.yaml
+  report_templates: report-templates/*.md
+  fixtures: fixtures/demo-30days.json
+default_agents:
+  - { type: admin,     enabled: true }
+  - { type: ops,       enabled: true }
+  - { type: analytics, enabled: true }
+  - { type: growth,    enabled: false, phase: 5 }
+  - { type: sales_cs,  enabled: false, phase: 5 }
+currency: MYR
+timezone: Asia/Kuala_Lumpur
+fiscal_day_start: "05:00"   # 餐饮日结跨夜，凌晨5点为营业日分界
+tax:
+  sst_service: 0.06         # 服务税 6%，视商家注册状态
+  e_invoice: { required_from: "2026-07-01", provider: MyInvois }

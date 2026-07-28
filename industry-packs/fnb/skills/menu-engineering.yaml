@@ -1,0 +1,39 @@
+id: menu_engineering
+name: { zh: 菜单工程分析, en: Menu Engineering }
+department: analytics
+triggers:
+  - { type: chat, patterns: ["哪些菜赚钱","菜单分析","要不要下架","menu engineering","哪个菜要推"] }
+  - { type: schedule, cron: "0 10 1 * *" }   # 每月1号
+inputs:
+  period: { type: enum, options: [last_30d, last_90d], default: last_30d }
+steps:
+  - id: fetch
+    type: metric_query
+    metrics: [order_count, revenue, food_cost, gross_margin]
+    dimensions: [menu_item]
+    range: "{{ period }}"
+  - id: classify
+    type: compute
+    logic: |
+      对每个菜品计算：
+        popularity = 销量 / 该分类平均销量
+        profitability = 单品毛利额 / 该分类平均毛利额
+      四象限：
+        明星 Star   : pop>=1 且 profit>=1  → 保持品质，放菜单显眼位
+        金牛 Plow   : pop>=1 且 profit<1   → 小幅提价 or 降成本，别下架
+        问题 Puzzle : pop<1  且 profit>=1  → 改名/换图/推荐/服务员主推
+        瘦狗 Dog    : pop<1  且 profit<1   → 下架，除非是引流品或必备品
+  - id: guard
+    type: rule_check
+    rules:
+      - "标记为 signature 或 halal 必备的菜，即使是 Dog 也不建议下架，需人工判断"
+      - "上架不足 30 天的新品不参与分类"
+  - id: compose
+    type: llm_generate
+    prompt_template: report/menu-engineering.md
+    context: [fetch, classify, memory.L1, glossary]
+  - id: deliver
+    type: notify
+    channels: [app, whatsapp]
+permissions_required: [read:order, read:order_line, read:menu_item, read:recipe_line]
+risk: low

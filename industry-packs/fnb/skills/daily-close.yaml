@@ -1,0 +1,37 @@
+id: daily_close_report
+name: { zh: 每日营业日结, en: Daily Close }
+department: analytics
+triggers:
+  - { type: chat, patterns: ["今天生意怎么样","日结","昨天多少钱","今日营业额"] }
+  - { type: schedule, cron: "30 23 * * *", channel: whatsapp, template: wa_daily_close }
+steps:
+  - id: fetch
+    type: metric_query
+    metrics: [revenue, net_receivable, order_count, guest_count, aov, food_cost_pct, void_rate, discount_rate]
+    dimensions: [channel]
+    range: business_day          # 按 fiscal_day_start 05:00 切分
+    compare: [yesterday, last_week_same_weekday, last_4w_same_weekday_avg]
+  - id: top_items
+    type: metric_query
+    metrics: [order_count, revenue]
+    dimensions: [menu_item]
+    limit: 5
+  - id: payments
+    type: metric_query
+    metrics: [amount]
+    dimensions: [payment.method]
+    note: "用于现金对账"
+  - id: checks
+    type: rule_check
+    rules: [void_anomaly, food_cost_spike, low_stock, revenue_drop]
+  - id: compose
+    type: llm_generate
+    prompt_template: report/daily-close.md
+    max_tokens: 700
+  - id: deliver
+    type: notify
+    channels: [whatsapp, app]
+    attach_chart: [hourly_revenue_bar]
+permissions_required: [read:order, read:payment, read:order_line]
+risk: low
+estimated_cost: { tokens: 2800, usd: 0.009 }

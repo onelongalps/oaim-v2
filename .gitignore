@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.*
+*.pem
+.DS_Store
+.oaim/messagebox/inbox/**/*.md
+!.oaim/messagebox/inbox/**/.gitkeep

@@ -1,0 +1,27 @@
+# 术语映射：商家怎么说 → 系统里是什么
+terms:
+  - { say: ["打包","tapau","takeaway"], means: "order.channel='takeaway'" }
+  - { say: ["外卖","送餐","grab","panda"], means: "order.channel IN ('grabfood','foodpanda','shopeefood')" }
+  - { say: ["堂食","坐店里","dine in"], means: "order.channel='dine_in'" }
+  - { say: ["埋单","结账","收钱"], means: "order.status='paid'" }
+  - { say: ["沽清","卖完了","sold out","冇了"], means: "menu_item.is_sold_out=true" }
+  - { say: ["翻台","转台"], means: "metric:table_turnover" }
+  - { say: ["客数","人头","pax"], means: "order.pax" }
+  - { say: ["水吧","饮料档"], means: "menu_category.station='drinks'" }
+  - { say: ["楼面","前场"], means: "staff.role IN ('waiter','cashier')" }
+  - { say: ["后厨","出品"], means: "staff.role='kitchen'" }
+  - { say: ["走单","跑单"], means: "order.status='void' 且无 payment" }
+  - { say: ["请客","招待"], means: "order.discount=100% + void_reason='招待'" }
+  - { say: ["员工餐"], means: "waste_log.reason='staff_meal'" }
+  - { say: ["生意","流水","营业额"], means: "metric:revenue" }
+  - { say: ["赚多少","净"], means: "metric:net_receivable 或 gross_margin，需追问口径" }
+  - { say: ["死货","压货"], means: "库存周转 > 30 天的 ingredient" }
+  - { say: ["套餐","set lunch"], means: "menu_item.tags 含 'set'" }
+  - { say: ["加料","addon","走冰","少甜"], means: "order_line.modifiers" }
+ambiguous:   # 必须追问口径，不许猜
+  - term: "赚了多少"
+    ask: "您是想看毛利（扣食材）还是净利（扣所有开销）？"
+  - term: "这个月"
+    ask: "按日历月（1号到今天）还是按您的结算月？"
+  - term: "生意好不好"
+    default: "默认对比过去4周同一星期几的平均"
